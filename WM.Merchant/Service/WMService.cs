@@ -1,0 +1,289 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Web;
+using System.Net;
+
+using WM.Merchant.Helpers;
+using WM.Merchant.Base;
+using WM.Merchant.Models;
+using Newtonsoft.Json;
+using System.Web.Configuration;
+
+namespace WM.Merchant
+{
+    public class WMService
+    {
+        #region Constants
+        const string WMMERCHANT_HOST = "http://apimerchant.webmoney.com.vn/";
+        const string WMMERCHANT_HOST_TEST = "http://apimerchant.webmoney.prj/";
+
+        const string PRODUCTION_PATH = "payment";
+        const string SANDBOX_PATH = "sandbox";
+
+        public const string SUCCESS_STATUS = "WM_SUCCESS";
+        public const string FAILED_STATUS = "WM_FAILED";
+        public const string WAITING_STATUS = "WM_WAITING";
+        public const string CANCELED_STATUS = "WM_CANCELED";
+        #endregion
+
+        /// <summary>
+        /// Merchant service config
+        /// </summary>
+        private static MerchantConfiguration _config = null;
+
+        /// <summary>
+        /// Get Merchant service config
+        /// if config is null, loaded from config file
+        /// </summary>
+        public static MerchantConfiguration Config
+        {
+            get
+            {
+                if (_config == null)
+                {
+                    _config = (MerchantConfiguration)WebConfigurationManager.GetWebApplicationSection("wmMerchant");
+                }
+
+                return _config;
+            }
+        }
+        /// <summary>
+        /// Production mode (true) or sandbox mode (false)
+        /// Default Sandbox mode
+        /// </summary>
+        public bool ProductionMode { set; get; }
+
+        /// <summary>
+        /// If this client using local debug
+        /// This property is used by Webmoney developer only, so you don't need caring about this
+        /// </summary>
+        public bool IsLocalTest { get; set; }
+
+        /// <summary>
+        /// Merchant Passcode, or Public key, which is provided by Webmoney
+        /// Used for identifying merchant profile, and to encrypt checksum
+        /// </summary>
+        public string Passcode { get; set; }
+        /// <summary>
+        /// Secret key, which is provided by Webmoney
+        /// Used as key to hash checksum, this key is very important, don't show it to unrelated people
+        /// </summary>
+        public string SecretKey { get; set; }
+
+        /// <summary>
+        /// WMService constructor
+        /// Load data from config
+        /// </summary>
+        /// <param name="settings"></param>
+        public WMService()
+        {
+            this.Passcode = Config.Service.Passcode;
+            this.SecretKey = Config.Service.SecretKey;
+            this.ProductionMode = Config.Service.ProductionMode;
+            this.IsLocalTest = Config.Service.IsLocalTest;
+        }
+
+        /// <summary>
+        /// WMService constructor
+        /// Load data from setting parameters
+        /// </summary>
+        /// <param name="settings">Setting dictionary</param>
+        public WMService(IDictionary<string, string> settings)
+        {
+            string passcode, secretKey, productionMode, isLocalTest = string.Empty;
+
+            // set passcode
+            settings.TryGetValue("WMPasscode", out passcode);
+            if (passcode == string.Empty)
+            {
+                throw new KeyNotFoundException("Passcode setting is empty");
+            }
+            this.Passcode = passcode;
+            // set secret key
+            settings.TryGetValue("WMSecretKey", out secretKey);
+            if (secretKey == string.Empty)
+            {
+                throw new KeyNotFoundException("SecretKey setting is empty");
+            }
+            this.SecretKey = secretKey;
+            // set production mode
+            settings.TryGetValue("WMProductionMode", out productionMode);
+            this.ProductionMode = productionMode == string.Empty ? false : bool.Parse(productionMode);
+            // set local test boolean
+            settings.TryGetValue("WMIsLocalTest", out isLocalTest);
+            this.IsLocalTest = isLocalTest == string.Empty ? false : bool.Parse(isLocalTest);
+        }
+
+        /// <summary>
+        /// Validate required Passcode and SecretKey properties
+        /// </summary>
+        protected void ValidateProperties()
+        {
+            if (this.Passcode == string.Empty)
+            {
+                throw new Exception("Webmoney Service Passcode is empty");
+            }
+
+            if (this.SecretKey == string.Empty)
+            {
+                throw new Exception("Webmoney Service Secret Key is empty");
+            }
+        }
+
+        /// <summary>
+        /// Create destination URL for API request
+        /// </summary>
+        /// <param name="actionName">Action name of API controller</param>
+        /// <returns></returns>
+        public string CreateURL(string actionName)
+        {
+            string host = this.IsLocalTest ? WMMERCHANT_HOST_TEST : WMMERCHANT_HOST;
+            string mode = this.ProductionMode ? PRODUCTION_PATH : SANDBOX_PATH;
+
+            return host + mode + "/" + actionName;
+        }
+
+        /// <summary>
+        /// Validates checksum of result URL
+        /// Compares checksum with the hash of transaction_id + status
+        /// </summary>
+        /// <param name="status"></param>
+        /// <returns>boolean if checksum is valid</returns>
+        public string ValidateResultURL(string status)
+        {
+            this.ValidateProperties();
+            var request = HttpContext.Current.Request;
+
+            string transactionID = request.QueryString.Get("transaction_id");
+            if (transactionID == string.Empty)
+            {
+                return "Empty transaction ID";
+            }
+
+            string checksum = request.QueryString.Get("checksum");
+            if (checksum == string.Empty)
+            {
+                return "Empty checksum";
+            }
+
+            string plainMsg = transactionID + status;
+            if (!SecurityHelper.CompareHMACHSA1(checksum, plainMsg, this.SecretKey))
+            {
+                return "Invalid checksum";
+            }
+
+            return "";
+        }
+
+        /// <summary>
+        /// Validates checksum of success URL
+        /// Compares checksum with the hash of transaction_id + "WM_SUCCESS"
+        /// </summary>
+        /// <returns>boolean if checksum is valid</returns>
+        public string ValidateSuccessURL()
+        {
+            return this.ValidateResultURL(SUCCESS_STATUS);
+        }
+
+        /// <summary>
+        /// Validates checksum of failed URL
+        /// Compares checksum with the hash of transaction_id + "WM_FAILED"
+        /// </summary>
+        /// <returns>boolean if checksum is valid</returns>
+        public string ValidateFailedURL()
+        {
+            return this.ValidateResultURL(FAILED_STATUS);
+        }
+
+        /// <summary>
+        /// Validates checksum of Cancel URL
+        /// Compares checksum with the hash of transaction_id + "WM_CANCELED"
+        /// </summary>
+        /// <returns>boolean if checksum is valid</returns>
+        public string ValidateCanceledURL()
+        {
+            return this.ValidateResultURL(CANCELED_STATUS);
+        }
+
+        /// <summary>
+        /// Create web request instance for send request to API
+        /// </summary>
+        /// <param name="uri">Destination URI</param>
+        /// <returns>WebRequest instance</returns>
+        public WebRequest CreateRequest(string uri)
+        {
+            this.ValidateProperties();
+
+            var request = WebRequest.Create(uri);
+            var httpRequest = HttpContext.Current.Request;
+
+            request.ContentType = "application/json";
+            request.Headers.Add("Authorization", this.Passcode);
+            request.Headers.Add("X-Forwarded-Host", NetHelper.GetBaseURI(httpRequest.Url));
+            request.Headers.Add("X-Forwarded-For", httpRequest.ServerVariables["LOCAL_ADDR"]);
+
+            return request;
+        }
+        
+        /// <summary>
+        /// Sends Creating Order request to Webmoney merchant API
+        /// </summary>
+        /// <param name="model">Create Order Request model</param>
+        /// <returns>Respones Handler</returns>
+        public WMResponseHandler<CreateOrderResponse> CreateOrder(CreateOrderRequest model)
+        {
+            var httpRequest = HttpContext.Current.Request;
+            string url = this.CreateURL("create-order");
+            var request = this.CreateRequest(url);
+
+            model.ClientIP = NetHelper.GetClientIPAddress();
+            model.UserAgent = httpRequest.UserAgent;
+            model.HashChecksum(this.Passcode, this.SecretKey);
+
+            string jsonText = JsonConvert.SerializeObject(model);
+            string jsonResponse = NetHelper.HttpRequest(request, jsonText);
+
+            var response = WMResponseHandler<CreateOrderResponse>.Load(jsonResponse);
+            if (response.IsError() || response.Object == null)
+            {
+                return response;
+            }
+
+            if (!SecurityHelper.CompareHMACHSA1(response.Object.Checksum, response.Object.HashMessage(), this.SecretKey))
+            {
+                response.ApplyError(WMResponseError.INVALID_CHECKSUM);
+            }
+            return response;
+        }
+
+        /// <summary>
+        /// Sends Creating Order request to Webmoney merchant API
+        /// </summary>
+        /// <param name="model">Create Order Request model</param>
+        /// <returns>Respones Handler</returns>
+        public WMResponseHandler<ViewOrderResponse> ViewOrder(ViewOrderRequest model)
+        {
+            string url = this.CreateURL("view-order");
+            var request = this.CreateRequest(url);
+
+            model.HashChecksum(this.Passcode, this.SecretKey);
+
+            string jsonText = JsonConvert.SerializeObject(model);
+            string jsonResponse = NetHelper.HttpRequest(request, jsonText);
+
+            var response = WMResponseHandler<ViewOrderResponse>.Load(jsonResponse);
+            if (response.IsError() || response.Object == null)
+            {
+                return response;
+            }
+            if (!SecurityHelper.CompareHMACHSA1(response.Object.Checksum, response.Object.HashMessage(), this.SecretKey))
+            {
+                response.ApplyError(WMResponseError.INVALID_CHECKSUM);
+            }
+            return response;
+        }
+    }
+}
