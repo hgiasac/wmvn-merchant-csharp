@@ -9,7 +9,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace WM.Merchant.Models
 {
-    public class CreateOrderResponse : WMResponseModel
+    public class CreateOrderResponse
     {
         [JsonProperty("transactionID")]
         [Display(Name = "Transaction ID")]
@@ -18,15 +18,6 @@ namespace WM.Merchant.Models
         [JsonProperty("redirectURL")]
         [Display(Name = "Redirect URL")]
         public string RedirectURL { set; get; }
-
-        /// <summary>
-        /// Return unique message to hash checksum
-        /// </summary>
-        /// <returns>string</returns>
-        public override string HashMessage()
-        {
-            return this.TransactionID + this.RedirectURL;
-        }
     }
 
 

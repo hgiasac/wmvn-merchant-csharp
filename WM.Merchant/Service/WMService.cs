@@ -67,6 +67,12 @@ namespace WM.Merchant
         /// Used for identifying merchant profile, and to encrypt checksum
         /// </summary>
         public string Passcode { get; set; }
+
+        /// <summary>
+        /// Merchant Code, which is provided by Webmoney
+        /// Used for identifying merchant profile, and to encrypt checksum
+        /// </summary>
+        public string MerchantCode { get; set; }
         /// <summary>
         /// Secret key, which is provided by Webmoney
         /// Used as key to hash checksum, this key is very important, don't show it to unrelated people
@@ -82,39 +88,9 @@ namespace WM.Merchant
         {
             this.Passcode = Config.Service.Passcode;
             this.SecretKey = Config.Service.SecretKey;
+            this.MerchantCode = Config.Service.MerchantCode;
             this.ProductionMode = Config.Service.ProductionMode;
             this.IsLocalTest = Config.Service.IsLocalTest;
-        }
-
-        /// <summary>
-        /// WMService constructor
-        /// Load data from setting parameters
-        /// </summary>
-        /// <param name="settings">Setting dictionary</param>
-        public WMService(IDictionary<string, string> settings)
-        {
-            string passcode, secretKey, productionMode, isLocalTest = string.Empty;
-
-            // set passcode
-            settings.TryGetValue("WMPasscode", out passcode);
-            if (passcode == string.Empty)
-            {
-                throw new KeyNotFoundException("Passcode setting is empty");
-            }
-            this.Passcode = passcode;
-            // set secret key
-            settings.TryGetValue("WMSecretKey", out secretKey);
-            if (secretKey == string.Empty)
-            {
-                throw new KeyNotFoundException("SecretKey setting is empty");
-            }
-            this.SecretKey = secretKey;
-            // set production mode
-            settings.TryGetValue("WMProductionMode", out productionMode);
-            this.ProductionMode = productionMode == string.Empty ? false : bool.Parse(productionMode);
-            // set local test boolean
-            settings.TryGetValue("WMIsLocalTest", out isLocalTest);
-            this.IsLocalTest = isLocalTest == string.Empty ? false : bool.Parse(isLocalTest);
         }
 
         /// <summary>
@@ -125,6 +101,11 @@ namespace WM.Merchant
             if (this.Passcode == string.Empty)
             {
                 throw new Exception("Webmoney Service Passcode is empty");
+            }
+
+            if (this.MerchantCode == string.Empty)
+            {
+                throw new Exception("Webmoney Service MerchantCode is empty");
             }
 
             if (this.SecretKey == string.Empty)
@@ -169,7 +150,7 @@ namespace WM.Merchant
                 return "Empty checksum";
             }
 
-            string plainMsg = transactionID + status;
+            string plainMsg = transactionID + status + MerchantCode + Passcode;
             if (!SecurityHelper.CompareHMACHSA1(checksum, plainMsg, this.SecretKey))
             {
                 return "Invalid checksum";
@@ -217,14 +198,14 @@ namespace WM.Merchant
         {
             this.ValidateProperties();
 
-            var request = WebRequest.Create(uri);
+            var request = WebRequest.Create(uri) as HttpWebRequest;
             var httpRequest = HttpContext.Current.Request;
 
             request.ContentType = "application/json";
             request.Headers.Add("Authorization", this.Passcode);
             request.Headers.Add("X-Forwarded-Host", NetHelper.GetBaseURI(httpRequest.Url));
             request.Headers.Add("X-Forwarded-For", httpRequest.ServerVariables["LOCAL_ADDR"]);
-
+            request.Referer = httpRequest.Url.AbsoluteUri;
             return request;
         }
         
@@ -241,21 +222,13 @@ namespace WM.Merchant
 
             model.ClientIP = NetHelper.GetClientIPAddress();
             model.UserAgent = httpRequest.UserAgent;
-            model.HashChecksum(this.Passcode, this.SecretKey);
+            model.HashChecksum(this);
 
             string jsonText = JsonConvert.SerializeObject(model);
             string jsonResponse = NetHelper.HttpRequest(request, jsonText);
 
             var response = WMResponseHandler<CreateOrderResponse>.Load(jsonResponse);
-            if (response.IsError() || response.Object == null)
-            {
-                return response;
-            }
 
-            if (!SecurityHelper.CompareHMACHSA1(response.Object.Checksum, response.Object.HashMessage(), this.SecretKey))
-            {
-                response.ApplyError(WMResponseError.INVALID_CHECKSUM);
-            }
             return response;
         }
 
@@ -269,20 +242,13 @@ namespace WM.Merchant
             string url = this.CreateURL("view-order");
             var request = this.CreateRequest(url);
 
-            model.HashChecksum(this.Passcode, this.SecretKey);
+            model.HashChecksum(this);
 
             string jsonText = JsonConvert.SerializeObject(model);
             string jsonResponse = NetHelper.HttpRequest(request, jsonText);
 
             var response = WMResponseHandler<ViewOrderResponse>.Load(jsonResponse);
-            if (response.IsError() || response.Object == null)
-            {
-                return response;
-            }
-            if (!SecurityHelper.CompareHMACHSA1(response.Object.Checksum, response.Object.HashMessage(), this.SecretKey))
-            {
-                response.ApplyError(WMResponseError.INVALID_CHECKSUM);
-            }
+
             return response;
         }
     }

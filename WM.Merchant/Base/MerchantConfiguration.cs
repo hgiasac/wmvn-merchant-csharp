@@ -37,6 +37,19 @@ namespace WM.Merchant
                 }
             }
 
+            [ConfigurationProperty("merchantCode", IsRequired = true)]
+            public String MerchantCode
+            {
+                get
+                {
+                    return (String)this["merchantCode"];
+                }
+                set
+                {
+                    this["merchantCode"] = value;
+                }
+            }
+
             [ConfigurationProperty("secretKey", IsRequired = true)]
             public String SecretKey
             {

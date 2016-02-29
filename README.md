@@ -10,7 +10,7 @@ Yêu cầu
 Hướng dẫn sử dụng
 -----------------------
 Build project WM.Merchant. Add reference vào project web của bạn 
-Thư viện sẽ yêu cầu một số thông tin chứng thực API, bao gồm Passcode và Secret Key, được cung cấp bởi Webmoney 
+Thư viện sẽ yêu cầu một số thông tin chứng thực API, bao gồm MerchantCode, Passcode và Secret Key, được cung cấp bởi Webmoney 
 
 Thêm và chỉnh sửa một số thông tin trong Web.config
 
@@ -23,7 +23,7 @@ Thêm và chỉnh sửa một số thông tin trong Web.config
   	</configSections>
 	...
 	<wmMerchant>
-    	<wmService passcode="YOUR PASSCODE" secretKey="YOUR SECRET KEY" productionMode="false" />
+    	<wmService merchantCode="YOUR MERCHANT CODE" passcode="YOUR PASSCODE" secretKey="YOUR SECRET KEY" productionMode="false" />
   	</wmMerchant>
 <configuration>
 ```
