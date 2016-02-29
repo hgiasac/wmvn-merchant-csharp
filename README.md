@@ -27,3 +27,24 @@ Thêm và chỉnh sửa một số thông tin trong Web.config
   	</wmMerchant>
 <configuration>
 ```
+
+Class WMService gồm có 2 method chính:
+```csharp
+public WMResponseHandler<CreateOrderResponse> CreateOrder(CreateOrderRequest model);
+```
+
+Gửi HTTP POST đến Webmoney Merchant để tạo đơn hàng. Thông tin trả về bao gồm Transaction ID của giao dịch trên Webmoney và RedirectURL để chuyển đến cổng thanh toán
+
+```csharp
+public WMResponseHandler<ViewOrderResponse> ViewOrder(ViewOrderRequest model);
+```
+
+Gửi HTTP POST đến Webmoney Merchant để xem thông tin giao dịch.
+
+```csharp
+public string ValidateSuccessURL();
+public string ValidateFailedURL();
+public string ValidateCanceledURL();
+```
+
+Sau khi thanh toán thành công, hoặc giao dịch bị hủy. Cổng thành toán sẽ trả về URL của đối tác, bao gồm transaction ID của đơn hàng và checksum. Lúc đó cần sử dụng những phương thức này để kiểm tra
