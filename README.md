@@ -28,7 +28,7 @@ Thêm và chỉnh sửa một số thông tin trong Web.config
 <configuration>
 ```
 
-Class WMService gồm có 2 method chính:
+Class WMService gồm có một số phương thức chính:
 ```csharp
 public WMResponseHandler<CreateOrderResponse> CreateOrder(CreateOrderRequest model);
 ```
