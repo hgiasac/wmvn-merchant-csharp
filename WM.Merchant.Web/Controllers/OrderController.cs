@@ -5,6 +5,7 @@ using System.Web;
 using System.Web.Mvc;
 using WM.Merchant;
 using WM.Merchant.Models;
+using WM.Merchant.Helpers;
 
 namespace WM.Merchant.Web.Controllers
 {
@@ -102,6 +103,9 @@ namespace WM.Merchant.Web.Controllers
                 CustomerPhone = "012345678",
                 Description = "Mua hàng tại cửa hàng ABC",
                 TotalAmount = 100,
+                ResultURL = Url.Action("Success", "Order", null, Request.Url.Scheme),
+                CancelURL = Url.Action("Canceled", "Order", null, Request.Url.Scheme),
+                ErrorURL = Url.Action("Failed", "Order", null, Request.Url.Scheme)
             };
         }
     }
