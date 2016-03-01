@@ -1,7 +1,0 @@
-D:\projects\nexx\net\WM.Merchant\WM.Merchant\bin\Debug\WM.Merchant.dll
-D:\projects\nexx\net\WM.Merchant\WM.Merchant\bin\Debug\WM.Merchant.pdb
-D:\projects\nexx\net\WM.Merchant\WM.Merchant\bin\Debug\Newtonsoft.Json.dll
-D:\projects\nexx\net\WM.Merchant\WM.Merchant\bin\Debug\Newtonsoft.Json.xml
-D:\projects\nexx\net\WM.Merchant\WM.Merchant\obj\Debug\WM.Merchant.csprojResolveAssemblyReference.cache
-D:\projects\nexx\net\WM.Merchant\WM.Merchant\obj\Debug\WM.Merchant.dll
-D:\projects\nexx\net\WM.Merchant\WM.Merchant\obj\Debug\WM.Merchant.pdb

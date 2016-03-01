@@ -17,7 +17,7 @@ namespace WM.Merchant
     public class WMService
     {
         #region Constants
-        const string WMMERCHANT_HOST = "http://apimerchant.webmoney.com.vn/";
+        const string WMMERCHANT_HOST = "https://apimerchant.webmoney.com.vn/";
         const string WMMERCHANT_HOST_TEST = "http://apimerchant.webmoney.prj/";
 
         const string PRODUCTION_PATH = "payment";
