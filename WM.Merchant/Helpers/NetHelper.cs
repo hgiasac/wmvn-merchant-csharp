@@ -117,6 +117,7 @@ namespace WM.Merchant.Helpers
             // counts content length, and converts requestBody string to byte
             byte[] bytes = System.Text.Encoding.UTF8.GetBytes(requestBody);
             int ContentLength = bytes.Length;
+            request.ContentLength = ContentLength;
             System.IO.Stream os = request.GetRequestStream();
             os.Write(bytes, 0, bytes.Length); //Push it out there
             os.Close();
