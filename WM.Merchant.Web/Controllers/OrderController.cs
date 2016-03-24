@@ -37,6 +37,8 @@ namespace WM.Merchant.Web.Controllers
         public ActionResult Create(CreateOrderRequest model)
         {
             var response = Service.CreateOrder(model);
+            if (!response.IsError())
+
             ViewData["Response"] = response;
             return View(model);
         }
@@ -93,6 +95,7 @@ namespace WM.Merchant.Web.Controllers
 
         protected CreateOrderRequest createSampleOrderRequest()
         {
+
             return new CreateOrderRequest()
             {
                 MerchantTransactionID = Guid.NewGuid().ToString(),

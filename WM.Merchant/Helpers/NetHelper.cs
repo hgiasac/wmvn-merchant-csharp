@@ -114,6 +114,8 @@ namespace WM.Merchant.Helpers
             {
                 request.Method = "POST";
             }
+            ServicePointManager.ServerCertificateValidationCallback += (sender, certificate, chain, sslPolicyErrors) => { return true; };
+
             // counts content length, and converts requestBody string to byte
             byte[] bytes = System.Text.Encoding.UTF8.GetBytes(requestBody);
             int ContentLength = bytes.Length;
